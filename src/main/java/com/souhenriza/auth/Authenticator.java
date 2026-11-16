@@ -1,4 +1,9 @@
 package com.souhenriza.auth;
 
-public class Authenticator {
+import com.souhenriza.error.SiscomexException;
+import com.souhenriza.session.Tokens;
+
+public interface Authenticator {
+
+    Tokens authenticate() throws SiscomexException;
 }

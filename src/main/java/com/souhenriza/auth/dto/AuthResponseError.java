@@ -1,9 +1,9 @@
 package com.souhenriza.auth.dto;
 
-public record AuthResponse(
+public record AuthResponseError(
         int status,
         String message,
         String tag,
-        String 
+        String code
 ) {
 }

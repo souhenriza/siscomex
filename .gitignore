@@ -37,3 +37,31 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Dados sensíveis (certificados reais, chaves privadas e segredos) ###
+# Certificados com chave privada e chaves avulsas: e-CPF/e-CNPJ A1 ou A3 e PKI local
+*.pfx
+*.p12
+*.jks
+*.keystore
+*.p8
+*.key
+*.pem
+*.csr
+# Os .p12 de teste em src/test/resources são fictícios e versionados de propósito
+!src/test/resources/certificates/**/*.p12
+
+# Segredos e configuração local
+.env
+.env.*
+*.env
+secrets.*
+*.secret
+credentials.*
+senha*.txt
+application-local.*
+local.properties
+
+# Tokens JWT e CSRF capturados em respostas
+*.jwt
+*.pdf
