@@ -61,7 +61,10 @@ credentials.*
 senha*.txt
 application-local.*
 local.properties
+.idea/
 
 # Tokens JWT e CSRF capturados em respostas
 *.jwt
 *.pdf
+ACcompactado
+ACcompactado/*.crt
