@@ -1,6 +1,6 @@
 package com.souhenriza.auth.credential;
 
-import com.souhenriza.error.SiscomexException;
+import com.souhenriza.auth.error.SiscomexException;
 import com.souhenriza.support.Fixtures;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

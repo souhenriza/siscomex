@@ -1,11 +1,12 @@
-package com.souhenriza.api;
+package com.souhenriza.auth.api;
 
 import com.souhenriza.auth.MaintenanceWindow;
-import com.souhenriza.error.PortalErrorCode;
-import com.souhenriza.error.PortalFailures;
-import com.souhenriza.error.SiscomexException;
-import com.souhenriza.session.Session;
-import com.souhenriza.session.SessionManagement;
+import com.souhenriza.auth.PortalUrl;
+import com.souhenriza.auth.error.PortalErrorCode;
+import com.souhenriza.auth.error.PortalFailures;
+import com.souhenriza.auth.error.SiscomexException;
+import com.souhenriza.auth.session.Session;
+import com.souhenriza.auth.session.SessionManagement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 /**
  * Envia requisições autenticadas aos serviços do portal.
@@ -36,6 +38,7 @@ public class ApiClient {
     private static final Logger LOG = LoggerFactory.getLogger(ApiClient.class);
 
     private static final int UNAUTHORIZED = 401;
+    private static final Pattern IMPORTER_NI = Pattern.compile("(/chaves-acesso/importadores/)[^/?]+");
     private static final Duration SERVICE_TIMEOUT = Duration.ofSeconds(60);
 
     private final String baseUrl;
@@ -44,8 +47,7 @@ public class ApiClient {
     private final Clock clock;
 
     public ApiClient(String baseUrl, SessionManagement sessions, HttpClient http, Clock clock) {
-        String base = Objects.requireNonNull(baseUrl, "baseUrl");
-        this.baseUrl = base.endsWith("/") ? base.substring(0, base.length() - 1) : base;
+        this.baseUrl = PortalUrl.requireHttps(baseUrl);
         this.sessions = Objects.requireNonNull(sessions, "sessoes");
         this.http = Objects.requireNonNull(http, "http");
         this.clock = Objects.requireNonNull(clock, "relogio");
@@ -62,7 +64,7 @@ public class ApiClient {
 
         Optional<Duration> maintenance = MaintenanceWindow.remainingAt(clock.instant());
         if (maintenance.isPresent()) {
-            LOG.info("Requisição {} {} não enviada: o portal está em parada programada.", request.method(), request.path());
+            LOG.info("Requisição {} {} não enviada: o portal está em parada programada.", request.method(), redactPath(request.path()));
             throw PortalFailures.portalError(PortalErrorCode.MAINTENANCE_WINDOW, null, maintenance.get());
         }
 
@@ -71,7 +73,7 @@ public class ApiClient {
                 ApiClient::sessionRejectedAndLogged);
 
         if (response.status() == UNAUTHORIZED) {
-            LOG.warn("O portal rejeitou a sessão de {} {} mesmo após nova autenticação.", request.method(), request.path());
+            LOG.warn("O portal rejeitou a sessão de {} {} mesmo após nova autenticação.", request.method(), redactPath(request.path()));
             throw new SiscomexException("O portal rejeitou a sessão mesmo após nova autenticação (HTTP 401).");
         }
 
@@ -98,7 +100,7 @@ public class ApiClient {
         try {
             raw = http.send(builder.build(), HttpResponse.BodyHandlers.ofString());
         } catch (IOException e) {
-            LOG.warn("Falha de comunicação em {} {}: {}", request.method(), request.path(), e.getMessage());
+            LOG.warn("Falha de comunicação em {} {}: {}", request.method(), redactPath(request.path()), e.getMessage());
             throw PortalFailures.communicationFailure(e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -111,8 +113,16 @@ public class ApiClient {
             sessions.updateFromResponse(null, response.header("X-CSRF-Token").orElse(null));
         }
 
-        LOG.debug("{} {} respondeu HTTP {}", request.method(), request.path(), response.status());
+        LOG.debug("{} {} respondeu HTTP {}", request.method(), redactPath(request.path()), response.status());
         return response;
+    }
+
+    /**
+     * Versão do caminho segura para log: o número de identificação do importador (CPF ou CNPJ), que aparece
+     * em {@code /chaves-acesso/importadores/{ni}}, é substituído por {@code ***}.
+     */
+    public static String redactPath(String path) {
+        return IMPORTER_NI.matcher(path).replaceAll("$1***");
     }
 
     private static boolean sessionRejectedAndLogged(SiscomexResponse response) {

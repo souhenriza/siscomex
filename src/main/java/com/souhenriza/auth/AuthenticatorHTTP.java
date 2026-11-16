@@ -3,10 +3,10 @@ package com.souhenriza.auth;
 import com.souhenriza.Environment;
 import com.souhenriza.auth.credential.Credentials;
 import com.souhenriza.auth.dto.AuthResponseError;
-import com.souhenriza.error.PortalErrorCode;
-import com.souhenriza.error.PortalFailures;
-import com.souhenriza.error.SiscomexException;
-import com.souhenriza.session.Tokens;
+import com.souhenriza.auth.error.PortalErrorCode;
+import com.souhenriza.auth.error.PortalFailures;
+import com.souhenriza.auth.error.SiscomexException;
+import com.souhenriza.auth.session.Tokens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.core.JacksonException;
@@ -62,8 +62,7 @@ public class AuthenticatorHTTP implements Authenticator {
         this.client = Objects.requireNonNull(http, "http");
         this.timeout = Objects.requireNonNull(timeout, "timeout");
         this.clock = Objects.requireNonNull(clock, "relogio");
-        String base = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-        this.uri = URI.create(base + AUTH_PATH);
+        this.uri = URI.create(PortalUrl.requireHttps(baseUrl) + AUTH_PATH);
     }
 
     private static HttpClient buildClient(Credentials credentials) {

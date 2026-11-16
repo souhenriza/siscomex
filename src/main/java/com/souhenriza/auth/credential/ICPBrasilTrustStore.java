@@ -1,20 +1,18 @@
 package com.souhenriza.auth.credential;
 
-import com.souhenriza.error.SiscomexException;
+import com.souhenriza.auth.error.SiscomexException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
-import java.security.Key;
 import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.cert.CertificateException;

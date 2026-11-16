@@ -3,7 +3,7 @@ package com.souhenriza;
 import com.souhenriza.auth.Authenticator;
 import com.souhenriza.auth.AuthenticatorHTTP;
 import com.souhenriza.auth.RoleType;
-import com.souhenriza.session.Tokens;
+import com.souhenriza.auth.session.Tokens;
 import com.souhenriza.support.LocalPortal;
 import com.souhenriza.support.MutableClock;
 import com.souhenriza.support.StubCredentials;
@@ -90,7 +90,7 @@ class SiscomexTest {
     @Test
     void sessionIsAuthenticatedAgainstThePortalWithTheConfiguredProfile() {
         portal.replyWithTokens("jwt-do-portal", "csrf-do-portal");
-        var authenticator = new AuthenticatorHTTP(portal.url(), credentials, HttpClient.newHttpClient(),
+        var authenticator = new AuthenticatorHTTP(portal.url(), credentials, portal.httpClient(),
                 Duration.ofSeconds(5), new MutableClock(Instant.parse("2026-11-15T15:00:00Z")));
         Siscomex siscomex = new Siscomex(Environment.VALIDACAO, credentials, authenticator);
 

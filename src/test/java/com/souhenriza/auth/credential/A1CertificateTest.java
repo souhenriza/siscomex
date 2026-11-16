@@ -1,8 +1,8 @@
 package com.souhenriza.auth.credential;
 
 import com.souhenriza.auth.RoleType;
-import com.souhenriza.error.PortalErrorCode;
-import com.souhenriza.error.SiscomexException;
+import com.souhenriza.auth.error.PortalErrorCode;
+import com.souhenriza.auth.error.SiscomexException;
 import com.souhenriza.support.Fixtures;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

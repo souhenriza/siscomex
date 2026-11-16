@@ -32,8 +32,8 @@ e declare a dependência no seu projeto:
 ```java
 import com.souhenriza.Environment;
 import com.souhenriza.Siscomex;
-import com.souhenriza.api.SiscomexRequest;
-import com.souhenriza.api.SiscomexResponse;
+import com.souhenriza.auth.api.SiscomexRequest;
+import com.souhenriza.auth.api.SiscomexResponse;
 import com.souhenriza.auth.RoleType;
 import com.souhenriza.auth.credential.A1Certificate;
 
@@ -195,26 +195,18 @@ Ainda não implementado:
 
 ## Criando uma biblioteca de serviço
 
-Uma biblioteca de serviço, como a da DUIMP, depende da `siscomex` e expõe métodos de negócio. Um padrão possível:
+Um serviço expõe métodos de negócio sobre o `Siscomex.send`. O exemplo real é o pacote `com.souhenriza.duimp`, com a `DuimpClient` (somente consultas, por enquanto):
 
 ```java
-public class DuimpClient {
+DuimpClient duimp = new DuimpClient(siscomex);
 
-    private static final String BASE_URL = "/duimp-api/api/ext";
-
-    private final Siscomex siscomex;
-
-    public DuimpClient(Siscomex siscomex) {
-        this.siscomex = siscomex;
-    }
-
-    public SiscomexResponse consultar(String numero, int versao) {
-        return siscomex.send(SiscomexRequest.get(BASE_URL + "/duimp/" + numero + "/" + versao));
-    }
-}
+DuimpDados dados = duimp.consultarDados(NumeroDuimp.of("21BR00000012345"), VersaoDuimp.of(2));
+List<ItemDuimp> itens = duimp.consultarItens(NumeroDuimp.of("21BR00000012345"), VersaoDuimp.of(2), IntervaloItens.padrao());
 ```
 
-Sempre que possível, valide o número antes de montar o caminho, para não enviar texto arbitrário na URL.
+- Os números (DUIMP, versão, item, faixa) são validados ao criar os objetos, antes de qualquer caminho chegar à URL.
+- Erros de negócio do portal (404, 422, 5xx) viram `DuimpException`, com `codigoInterno()` e `erros()`.
+- Falhas de autenticação e de comunicação continuam como `SiscomexException`.
 
 ## Testes
 

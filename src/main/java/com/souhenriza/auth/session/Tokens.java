@@ -1,4 +1,4 @@
-package com.souhenriza.session;
+package com.souhenriza.auth.session;
 
 public record Tokens(String authToken, String csrfToken) {
     public Tokens{

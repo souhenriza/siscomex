@@ -1,7 +1,7 @@
 package com.souhenriza.auth;
 
 import com.souhenriza.auth.cert.ITIBrasilCertType;
-import com.souhenriza.error.SiscomexException;
+import com.souhenriza.auth.error.SiscomexException;
 
 import java.util.Arrays;
 import java.util.Locale;

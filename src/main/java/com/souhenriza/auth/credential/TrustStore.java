@@ -1,6 +1,6 @@
 package com.souhenriza.auth.credential;
 
-import com.souhenriza.error.SiscomexException;
+import com.souhenriza.auth.error.SiscomexException;
 
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;

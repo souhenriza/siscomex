@@ -2,10 +2,13 @@ package com.souhenriza.api;
 
 import com.souhenriza.auth.AuthenticatorHTTP;
 import com.souhenriza.auth.RoleType;
-import com.souhenriza.error.PortalErrorCode;
-import com.souhenriza.error.SiscomexException;
-import com.souhenriza.session.Pause;
-import com.souhenriza.session.SessionManagement;
+import com.souhenriza.auth.api.ApiClient;
+import com.souhenriza.auth.api.SiscomexRequest;
+import com.souhenriza.auth.api.SiscomexResponse;
+import com.souhenriza.auth.error.PortalErrorCode;
+import com.souhenriza.auth.error.SiscomexException;
+import com.souhenriza.auth.session.Pause;
+import com.souhenriza.auth.session.SessionManagement;
 import com.souhenriza.support.LocalPortal;
 import com.souhenriza.support.LocalPortal.Reply;
 import com.souhenriza.support.MutableClock;
@@ -51,7 +54,7 @@ class ApiClientTest {
 
     private ApiClient client(Instant now) {
         Clock clock = new MutableClock(now);
-        HttpClient http = HttpClient.newHttpClient();
+        HttpClient http = portal.httpClient();
         AuthenticatorHTTP authenticator = new AuthenticatorHTTP(portal.url(),
                 new StubCredentials(RoleType.AGECARGA), http, Duration.ofSeconds(5), clock);
         // Intervalo mínimo zero: os testes não devem esperar o limite de 60 s do portal.

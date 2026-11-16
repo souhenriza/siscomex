@@ -1,4 +1,4 @@
-package com.souhenriza.session;
+package com.souhenriza.auth.session;
 
 import java.time.Instant;
 import java.util.Objects;

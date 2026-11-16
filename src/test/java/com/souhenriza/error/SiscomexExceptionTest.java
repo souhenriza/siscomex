@@ -1,5 +1,7 @@
 package com.souhenriza.error;
 
+import com.souhenriza.auth.error.PortalErrorCode;
+import com.souhenriza.auth.error.SiscomexException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

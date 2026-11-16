@@ -1,7 +1,7 @@
 package com.souhenriza.auth;
 
-import com.souhenriza.error.SiscomexException;
-import com.souhenriza.session.Tokens;
+import com.souhenriza.auth.error.SiscomexException;
+import com.souhenriza.auth.session.Tokens;
 
 public interface Authenticator {
 

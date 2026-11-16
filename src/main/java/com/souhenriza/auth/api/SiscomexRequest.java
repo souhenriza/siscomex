@@ -1,4 +1,4 @@
-package com.souhenriza.api;
+package com.souhenriza.auth.api;
 
 import java.util.Objects;
 

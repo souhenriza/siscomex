@@ -1,7 +1,9 @@
 package com.souhenriza.session;
 
 import com.souhenriza.auth.Authenticator;
-import com.souhenriza.error.SiscomexException;
+import com.souhenriza.auth.error.SiscomexException;
+import com.souhenriza.auth.session.SessionManagement;
+import com.souhenriza.auth.session.Tokens;
 import com.souhenriza.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

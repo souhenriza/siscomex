@@ -1,7 +1,7 @@
-package com.souhenriza.session;
+package com.souhenriza.auth.session;
 
 import com.souhenriza.auth.Authenticator;
-import com.souhenriza.error.SiscomexException;
+import com.souhenriza.auth.error.SiscomexException;
 
 import java.time.Clock;
 import java.time.Duration;

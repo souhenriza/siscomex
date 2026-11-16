@@ -4,8 +4,8 @@ import com.souhenriza.auth.RoleType;
 
 import com.souhenriza.auth.cert.CertIdentifier;
 import com.souhenriza.auth.cert.ITIBrasilCertType;
-import com.souhenriza.error.PortalErrorCode;
-import com.souhenriza.error.SiscomexException;
+import com.souhenriza.auth.error.PortalErrorCode;
+import com.souhenriza.auth.error.SiscomexException;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -80,7 +80,9 @@ public class A1Certificate implements Credentials {
         } catch (Exception e) {
             throw new SiscomexException("Falha ao carregar o certificado digital.", e);
         } finally {
-            Arrays.fill(passphrase, '\0');
+            if (passphrase != null) {
+                Arrays.fill(passphrase, '\0');
+            }
         }
     }
 

@@ -1,8 +1,8 @@
 package com.souhenriza.auth;
 
-import com.souhenriza.error.PortalErrorCode;
-import com.souhenriza.error.SiscomexException;
-import com.souhenriza.session.Tokens;
+import com.souhenriza.auth.error.PortalErrorCode;
+import com.souhenriza.auth.error.SiscomexException;
+import com.souhenriza.auth.session.Tokens;
 import com.souhenriza.support.LocalPortal;
 import com.souhenriza.support.MutableClock;
 import com.souhenriza.support.StubCredentials;
@@ -46,7 +46,7 @@ class AuthenticatorHTTPTest {
     }
 
     private AuthenticatorHTTP authenticator(StubCredentials credentials, Instant now) {
-        return new AuthenticatorHTTP(portal.url(), credentials, HttpClient.newHttpClient(),
+        return new AuthenticatorHTTP(portal.url(), credentials, portal.httpClient(),
                 Duration.ofSeconds(5), new MutableClock(now));
     }
 
@@ -212,7 +212,7 @@ class AuthenticatorHTTPTest {
         try (ServerSocket free = new ServerSocket(0)) {
             closedPort = free.getLocalPort();
         }
-        var authenticator = new AuthenticatorHTTP("http://localhost:" + closedPort, new StubCredentials(RoleType.AGECARGA),
+        var authenticator = new AuthenticatorHTTP("https://localhost:" + closedPort, new StubCredentials(RoleType.AGECARGA),
                 HttpClient.newHttpClient(), Duration.ofSeconds(5), new MutableClock(NOON));
 
         SiscomexException e = assertThrows(SiscomexException.class, authenticator::authenticate);

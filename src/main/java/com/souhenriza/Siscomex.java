@@ -1,12 +1,12 @@
 package com.souhenriza;
 
-import com.souhenriza.api.ApiClient;
-import com.souhenriza.api.SiscomexRequest;
-import com.souhenriza.api.SiscomexResponse;
+import com.souhenriza.auth.api.ApiClient;
+import com.souhenriza.auth.api.SiscomexRequest;
+import com.souhenriza.auth.api.SiscomexResponse;
 import com.souhenriza.auth.Authenticator;
 import com.souhenriza.auth.AuthenticatorHTTP;
 import com.souhenriza.auth.credential.Credentials;
-import com.souhenriza.session.SessionManagement;
+import com.souhenriza.auth.session.SessionManagement;
 
 import java.net.http.HttpClient;
 import java.time.Clock;

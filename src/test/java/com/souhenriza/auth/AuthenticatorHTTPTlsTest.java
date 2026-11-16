@@ -2,8 +2,8 @@ package com.souhenriza.auth;
 
 import com.souhenriza.auth.credential.A1Certificate;
 import com.souhenriza.auth.credential.TrustStore;
-import com.souhenriza.error.SiscomexException;
-import com.souhenriza.session.Tokens;
+import com.souhenriza.auth.error.SiscomexException;
+import com.souhenriza.auth.session.Tokens;
 import com.souhenriza.support.Fixtures;
 import com.souhenriza.support.LocalPortal;
 import com.souhenriza.support.MutableClock;

@@ -1,4 +1,4 @@
-package com.souhenriza.error;
+package com.souhenriza.auth.error;
 
 import com.souhenriza.auth.dto.AuthResponseError;
 
