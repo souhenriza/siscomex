@@ -76,7 +76,7 @@
                 <version>13.0.0</version>
                 <configuration>
                     <failBuildOnCVSS>8</failBuildOnCVSS>
-                    <nvdApiKey>${NVD_API_KEY}</nvdApiKey>
+                    <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
                 </configuration>
 
                 <executions>
