@@ -1,7 +1,24 @@
 package com.souhenriza.duimp;
 
-import com.souhenriza.auth.api.SiscomexRequest;
-import com.souhenriza.auth.api.SiscomexResponse;
+import com.souhenriza.autenticacao.api.RequisicaoSiscomex;
+import com.souhenriza.autenticacao.api.RespostaSiscomex;
+import com.souhenriza.duimp.model.importador.Duimp;
+import com.souhenriza.duimp.model.importador.IntervaloItens;
+import com.souhenriza.duimp.model.importador.LinkDuimp;
+import com.souhenriza.duimp.model.importador.modelos.CargaCover;
+import com.souhenriza.duimp.model.importador.modelos.DocumentosCover;
+import com.souhenriza.duimp.model.importador.modelos.DocumentosInstrucaoCover;
+import com.souhenriza.duimp.model.importador.modelos.IdentificacaoCapaCover;
+import com.souhenriza.duimp.model.importador.modelos.ImportadorCover;
+import com.souhenriza.duimp.model.importador.modelos.PalavraChaveDocumentoInstrucaoCover;
+import com.souhenriza.duimp.model.importador.modelos.TipoDocumentoInstrucaoCover;
+import com.souhenriza.duimp.model.importador.modelos.TipoIdentificacaoCarga;
+import com.souhenriza.duimp.model.importador.modelos.TipoImportador;
+import com.souhenriza.duimp.model.importador.modelos.UnidadeDeclaradaCover;
+import com.souhenriza.duimp.model.importador.NumeroDuimp;
+import com.souhenriza.duimp.model.importador.NumeroItem;
+import com.souhenriza.duimp.model.importador.VersaoDuimp;
+import com.souhenriza.shared.SiscomexGateway;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -11,6 +28,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -22,21 +40,21 @@ class DuimpClientTest {
 
     /** Gateway falso: registra as requisições e devolve a resposta configurada. */
     private static final class Portal implements SiscomexGateway {
-        final List<SiscomexRequest> enviadas = new ArrayList<>();
-        SiscomexResponse resposta = new SiscomexResponse(200, "{}", Map.of());
+        final List<RequisicaoSiscomex> enviadas = new ArrayList<>();
+        RespostaSiscomex resposta = new RespostaSiscomex(200, "{}", Map.of());
 
         @Override
-        public SiscomexResponse send(SiscomexRequest request) {
+        public RespostaSiscomex send(RequisicaoSiscomex request) {
             enviadas.add(request);
             return resposta;
         }
 
         void responde(int status, String corpo) {
-            resposta = new SiscomexResponse(status, corpo, Map.of());
+            resposta = new RespostaSiscomex(status, corpo, Map.of());
         }
 
         String ultimoCaminho() {
-            return enviadas.getLast().path();
+            return enviadas.getLast().caminho();
         }
     }
 
@@ -153,7 +171,7 @@ class DuimpClientTest {
                 () -> new DuimpClient(portal).consultarDados(NUMERO, VERSAO));
 
         assertTrue(e.isBusinessError());
-        assertFalse(e.isRetryable());
+        assertFalse(e.ehRepetivel());
         assertEquals("DIMP-ER0001", e.codigoInterno());
         assertEquals(1, e.erros().size());
         assertEquals("DIMP-ER9999", e.erros().getFirst().code());
@@ -180,7 +198,7 @@ class DuimpClientTest {
         DuimpException e = assertThrows(DuimpException.class,
                 () -> new DuimpClient(portal).consultarDados(NUMERO, VERSAO));
 
-        assertTrue(e.isRetryable());
+        assertTrue(e.ehRepetivel());
     }
 
     @Test
@@ -208,7 +226,7 @@ class DuimpClientTest {
     void niComCaracteresEstranhosNaoChegaAoPortal() {
         Portal portal = new Portal();
 
-        assertThrows(IllegalArgumentException.class, () -> new DuimpClient(portal)
+        assertThrows(DuimpException.class, () -> new DuimpClient(portal)
                 .consultarChavesAcessoPorImportador("1/../2", LocalDate.of(2021, 3, 1),
                         LocalDate.of(2021, 6, 10), 0, 100));
         assertTrue(portal.enviadas.isEmpty());
@@ -218,9 +236,103 @@ class DuimpClientTest {
     void periodoInvertidoNaoChegaAoPortal() {
         Portal portal = new Portal();
 
-        assertThrows(IllegalArgumentException.class, () -> new DuimpClient(portal)
+        assertThrows(DuimpException.class, () -> new DuimpClient(portal)
                 .consultarChavesAcessoPorImportador("191", LocalDate.of(2021, 6, 10),
                         LocalDate.of(2021, 3, 1), 0, 100));
         assertTrue(portal.enviadas.isEmpty());
+    }
+
+    // ---------------------------------------------------------------- salvar dados gerais (POST)
+
+    private static Duimp capaMinima() {
+        return new Duimp(
+                new IdentificacaoCapaCover(new ImportadorCover(TipoImportador.CNPJ, "00055555000130"), null),
+                new CargaCover(TipoIdentificacaoCarga.CE, null, new UnidadeDeclaradaCover("7912001"), null,
+                        null, null, null, null, null, null),
+                new DocumentosCover(List.of(new DocumentosInstrucaoCover(new TipoDocumentoInstrucaoCover("99"),
+                        List.of(new PalavraChaveDocumentoInstrucaoCover(33, "9999.99.99")))), null, null),
+                null);
+    }
+
+    @Test
+    void salvarDadosGeraisEnviaPostNaBaseSemCamposNulos() {
+        Portal portal = new Portal();
+        portal.responde(201, "{\"identificacao\":{\"numero\":\"20BR00000012345\",\"versao\":\"1\"}}");
+
+        new DuimpClient(portal).salvarDadosGerais(capaMinima());
+
+        RequisicaoSiscomex enviada = portal.enviadas.getLast();
+        assertEquals("POST", enviada.metodo());
+        assertEquals(BASE, enviada.caminho());
+        assertEquals("{\"identificacao\":{\"importador\":{\"tipoImportador\":\"CNPJ\",\"ni\":\"00055555000130\"}},"
+                + "\"carga\":{\"tipoIdentificacaoCarga\":\"CE\",\"unidadeDeclarada\":{\"codigo\":\"7912001\"}},"
+                + "\"documentos\":{\"documentosInstrucao\":[{\"tipo\":{\"codigo\":\"99\"},"
+                + "\"palavrasChave\":[{\"codigo\":33,\"valor\":\"9999.99.99\"}]}]}}", enviada.corpo());
+    }
+
+    @Test
+    void salvarDadosGeraisLeNumeroVersaoELinks() {
+        Portal portal = new Portal();
+        portal.responde(201, "{\"internal-code\":\"DIMP-ER0001\",\"message\":\"Mensagem de exemplo.\","
+                + "\"identificacao\":{\"numero\":\"20BR00000012345\",\"versao\":\"1\"},"
+                + "\"links\":[{\"_rel\":\"self\",\"_href\":\"/duimp-api/api/ext/duimp/20BR00000012345/1\","
+                + "\"_method\":\"GET\"}]}");
+
+        DadosDuimpSalvo salvo = new DuimpClient(portal).salvarDadosGerais(capaMinima());
+
+        assertEquals("20BR00000012345", salvo.numero());
+        assertEquals(1, salvo.versao());
+        assertEquals("DIMP-ER0001", salvo.codigoInterno());
+        assertEquals("Mensagem de exemplo.", salvo.mensagem());
+        assertEquals(List.of(new LinkDuimp("self", "/duimp-api/api/ext/duimp/20BR00000012345/1", "GET")),
+                salvo.links());
+        assertEquals("20BR00000012345", salvo.identificacao().numero());
+        assertEquals("20BR00000012345", salvo.raw().path("identificacao").path("numero").asString());
+    }
+
+    @Test
+    void salvarDadosGeraisSemIdentificacaoDevolveNumeroEVersaoNulos() {
+        Portal portal = new Portal();
+        portal.responde(201, "{\"message\":\"ok\"}");
+
+        DadosDuimpSalvo salvo = new DuimpClient(portal).salvarDadosGerais(capaMinima());
+
+        assertNull(salvo.numero());
+        assertNull(salvo.versao());
+        assertEquals("ok", salvo.mensagem());
+    }
+
+    @Test
+    void salvarDadosGeraisSemLinksDevolveListaVazia() {
+        Portal portal = new Portal();
+        portal.responde(201, "{\"identificacao\":{\"numero\":\"20BR00000012345\",\"versao\":1}}");
+
+        DadosDuimpSalvo salvo = new DuimpClient(portal).salvarDadosGerais(capaMinima());
+
+        assertEquals(1, salvo.versao());
+        assertTrue(salvo.links().isEmpty());
+    }
+
+    @Test
+    void capaInvalidaNaoChegaAoPortal() {
+        Portal portal = new Portal();
+
+        var e = assertThrows(DuimpValidacaoException.class,
+                () -> new DuimpClient(portal).salvarDadosGerais(new Duimp(null, null, null, null)));
+
+        assertEquals(3, e.violacoes().size());
+        assertTrue(portal.enviadas.isEmpty());
+    }
+
+    @Test
+    void capaRecusadaPeloPortalGeraDuimpException() {
+        Portal portal = new Portal();
+        portal.responde(422, "{\"message\":\"Capa inválida\",\"errors\":[{\"code\":\"DIMP-ER0002\","
+                + "\"field\":\"carga.unidadeDeclarada\",\"message\":\"Unidade inexistente\"}]}");
+
+        var e = assertThrows(DuimpException.class, () -> new DuimpClient(portal).salvarDadosGerais(capaMinima()));
+
+        assertEquals(422, e.status());
+        assertEquals("DIMP-ER0002", e.erros().getFirst().code());
     }
 }

@@ -24,18 +24,18 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * Servidor HTTPS local que simula o portal. O certificado do servidor é emitido pela CA de teste
  * ({@code tls/server.p12}); {@link #httpClient()} devolve um cliente que confia nessa CA, como o
- * cliente de produção faz com o TrustStore informado. Registra cada requisição recebida e responde
+ * cliente de produção faz com o ArmazemDeConfianca informado. Registra cada requisição recebida e responde
  * com o que o teste configurou.
  */
 public final class LocalPortal implements AutoCloseable {
 
-    public record Request(String method, String path, Map<String, String> headers) {
+    public record Request(String method, String path, Map<String, String> headers, String body) {
         public String header(String name) {
             return headers.get(name);
         }
     }
 
-    public record Reply(int status, String body, String setToken, String csrfToken) {
+    public record Reply(int status, String body, String setToken, String tokenCsrf) {
     }
 
     private final HttpServer server;
@@ -59,14 +59,16 @@ public final class LocalPortal implements AutoCloseable {
         server.createContext("/", exchange -> {
             Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
             exchange.getRequestHeaders().forEach((name, values) -> headers.put(name, values.getFirst()));
-            requests.add(new Request(exchange.getRequestMethod(), exchange.getRequestURI().getPath(), headers));
+            String requestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            requests.add(new Request(exchange.getRequestMethod(), exchange.getRequestURI().getPath(), headers,
+                    requestBody));
 
             Reply r = nextReply(exchange.getRequestURI().getPath());
             if (r.setToken() != null) {
                 exchange.getResponseHeaders().add("Set-Token", r.setToken());
             }
-            if (r.csrfToken() != null) {
-                exchange.getResponseHeaders().add("X-CSRF-Token", r.csrfToken());
+            if (r.tokenCsrf() != null) {
+                exchange.getResponseHeaders().add("X-CSRF-Token", r.tokenCsrf());
             }
             exchange.getResponseHeaders().add("Content-Type", "application/json");
 

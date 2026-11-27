@@ -1,12 +1,12 @@
 package com.souhenriza;
 
-import com.souhenriza.auth.Authenticator;
-import com.souhenriza.auth.AuthenticatorHTTP;
-import com.souhenriza.auth.RoleType;
-import com.souhenriza.auth.session.Tokens;
+import com.souhenriza.autenticacao.Autenticador;
+import com.souhenriza.autenticacao.AutenticadorHTTP;
+import com.souhenriza.autenticacao.PerfilAcesso;
+import com.souhenriza.autenticacao.sessao.Tokens;
 import com.souhenriza.support.LocalPortal;
 import com.souhenriza.support.MutableClock;
-import com.souhenriza.support.StubCredentials;
+import com.souhenriza.support.StubCredenciais;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +15,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.IOException;
-import java.net.http.HttpClient;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -26,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SiscomexTest {
 
-    private final StubCredentials credentials = new StubCredentials(RoleType.IMPEXP);
+    private final StubCredenciais credentials = new StubCredenciais(PerfilAcesso.IMPEXP);
     private LocalPortal portal;
 
     @BeforeEach
@@ -46,8 +45,8 @@ class SiscomexTest {
             "VALIDACAO,   https://val.portalunico.siscomex.gov.br/",
             "HOMOLOGACAO, https://hom.pucomex.serpro.gov.br/"
     })
-    void environmentUrlsMatchTheDocumentation(Environment environment, String url) {
-        assertEquals(url, environment.getUrl());
+    void environmentUrlsMatchTheDocumentation(Ambiente ambiente, String url) {
+        assertEquals(url, ambiente.getUrl());
     }
 
     @DisplayName("Builder sem ambiente lança NullPointerException")
@@ -60,18 +59,18 @@ class SiscomexTest {
     @Test
     void builderRequiresCredentials() {
         assertThrows(NullPointerException.class,
-                () -> new Siscomex.Builder().environment(Environment.VALIDACAO).build());
+                () -> new Siscomex.Builder().environment(Ambiente.VALIDACAO).build());
     }
 
-    @DisplayName("Instância construída mantém ambiente e credenciais e expõe o SessionManagement")
+    @DisplayName("Instância construída mantém ambiente e credenciais e expõe o GerenciadorSessao")
     @Test
     void builtInstanceKeepsEnvironmentAndCredentials() {
         Siscomex siscomex = new Siscomex.Builder()
-                .environment(Environment.VALIDACAO)
+                .environment(Ambiente.VALIDACAO)
                 .credentials(credentials)
                 .build();
 
-        assertEquals(Environment.VALIDACAO, siscomex.getAmbiente());
+        assertEquals(Ambiente.VALIDACAO, siscomex.getEnvironment());
         assertSame(credentials, siscomex.getCredential());
         assertNotNull(siscomex.getSessionManagement());
     }
@@ -79,25 +78,25 @@ class SiscomexTest {
     @DisplayName("A sessão é obtida pelo autenticador injetado")
     @Test
     void sessionIsObtainedThroughTheInjectedAuthenticator() {
-        Authenticator fake = () -> new Tokens("jwt-fake", "csrf-fake");
-        Siscomex siscomex = new Siscomex(Environment.PRODUCAO, credentials, fake);
+        Autenticador fake = () -> new Tokens("jwt-fake", "csrf-fake");
+        Siscomex siscomex = new Siscomex(Ambiente.PRODUCAO, credentials, fake);
 
-        assertEquals("jwt-fake", siscomex.getSessionManagement().getValidSession().authToken());
+        assertEquals("jwt-fake", siscomex.getSessionManagement().obterSessaoValida().tokenAutenticacao());
     }
 
-    /** Fluxo completo: Siscomex -> SessionManagement -> AuthenticatorHTTP -> portal (servidor local). */
+    /** Fluxo completo: Siscomex -> GerenciadorSessao -> AutenticadorHTTP -> portal (servidor local). */
     @DisplayName("Fluxo completo: o Siscomex obtém a sessão do portal e envia o Role-Type configurado")
     @Test
     void sessionIsAuthenticatedAgainstThePortalWithTheConfiguredProfile() {
         portal.replyWithTokens("jwt-do-portal", "csrf-do-portal");
-        var authenticator = new AuthenticatorHTTP(portal.url(), credentials, portal.httpClient(),
+        var authenticator = new AutenticadorHTTP(portal.url(), credentials, portal.httpClient(),
                 Duration.ofSeconds(5), new MutableClock(Instant.parse("2026-11-15T15:00:00Z")));
-        Siscomex siscomex = new Siscomex(Environment.VALIDACAO, credentials, authenticator);
+        Siscomex siscomex = new Siscomex(Ambiente.VALIDACAO, credentials, authenticator);
 
-        var session = siscomex.getSessionManagement().getValidSession();
+        var session = siscomex.getSessionManagement().obterSessaoValida();
 
-        assertEquals("jwt-do-portal", session.authToken());
-        assertEquals("csrf-do-portal", session.csrfToken());
+        assertEquals("jwt-do-portal", session.tokenAutenticacao());
+        assertEquals("csrf-do-portal", session.tokenCsrf());
         assertEquals("IMPEXP", portal.requests().get(0).header("Role-Type"));
         assertEquals(1, portal.requests().size());
     }

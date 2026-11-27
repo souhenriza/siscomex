@@ -1,5 +1,9 @@
 package com.souhenriza.duimp;
 
+import com.souhenriza.duimp.model.importador.IntervaloItens;
+import com.souhenriza.duimp.model.importador.NumeroDuimp;
+import com.souhenriza.duimp.model.importador.NumeroItem;
+import com.souhenriza.duimp.model.importador.VersaoDuimp;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -28,31 +32,31 @@ class ValueObjectsTest {
             "21BR00000012345 "         // espaço no fim
     })
     void recusaNumeroForaDoFormato(String valor) {
-        assertThrows(IllegalArgumentException.class, () -> NumeroDuimp.of(valor));
+        assertThrows(DuimpException.class, () -> NumeroDuimp.of(valor));
     }
 
     @Test
     void versaoEntreZeroeNoventaENoveMil() {
         assertDoesNotThrow(() -> VersaoDuimp.of(0));
         assertDoesNotThrow(() -> VersaoDuimp.of(9999));
-        assertThrows(IllegalArgumentException.class, () -> VersaoDuimp.of(-1));
-        assertThrows(IllegalArgumentException.class, () -> VersaoDuimp.of(10000));
+        assertThrows(DuimpException.class, () -> VersaoDuimp.of(-1));
+        assertThrows(DuimpException.class, () -> VersaoDuimp.of(10000));
     }
 
     @Test
     void numeroDeItemEntreUmECincoDigitos() {
         assertDoesNotThrow(() -> NumeroItem.of(1));
         assertDoesNotThrow(() -> NumeroItem.of(99_999));
-        assertThrows(IllegalArgumentException.class, () -> NumeroItem.of(0));
-        assertThrows(IllegalArgumentException.class, () -> NumeroItem.of(100_000));
+        assertThrows(DuimpException.class, () -> NumeroItem.of(0));
+        assertThrows(DuimpException.class, () -> NumeroItem.of(100_000));
     }
 
     @Test
     void intervaloDeItensRespeitaOLimiteDeCem() {
         assertEquals(new IntervaloItens(1, 100), IntervaloItens.padrao());
         assertDoesNotThrow(() -> new IntervaloItens(5, 100));
-        assertThrows(IllegalArgumentException.class, () -> new IntervaloItens(0, 10));
-        assertThrows(IllegalArgumentException.class, () -> new IntervaloItens(1, 0));
-        assertThrows(IllegalArgumentException.class, () -> new IntervaloItens(1, 101));
+        assertThrows(DuimpException.class, () -> new IntervaloItens(0, 10));
+        assertThrows(DuimpException.class, () -> new IntervaloItens(1, 0));
+        assertThrows(DuimpException.class, () -> new IntervaloItens(1, 101));
     }
 }
