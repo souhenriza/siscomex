@@ -490,7 +490,7 @@ Para criar um novo serviço, siga o padrão de `DueClient`: receba um `Siscomex`
 
 ## Licença
 
-Apache License 2.0, conforme declarado no `pom.xml`. O arquivo `LICENSE` ainda não foi adicionado ao repositório.
+Apache License 2.0, conforme declarado no `pom.xml` e constante no arquivo 'LICENSE'.
 
 ---
 
