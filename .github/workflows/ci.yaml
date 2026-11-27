@@ -1,0 +1,52 @@
+name: Java CI de integração com a branch ativa
+
+on:
+  pull_request:
+    branches:
+      - "main"
+  push:
+
+jobs:
+  secret-scan:
+    name: GitLeak Secret scanner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código com histórico completo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Executar GitLeaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+  unit-tests:
+    name: Testes unitários
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Rodar testes
+        run: mvn -B test
+
+      - name: Testar dependências
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_TOKEN }}
+        run: mvn -B org.owasp:dependency-check-maven:check
+
+      - name: "Salvar o relatório de análise de dependências como artefato."
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: owasp-dependency-report
+          path: target/dependency-check-report.html
+

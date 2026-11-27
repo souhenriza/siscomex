@@ -4,10 +4,14 @@ import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsServer;
 
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.http.HttpClient;
+import java.security.KeyStore;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -18,18 +22,20 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Servidor HTTP local que simula o portal. Registra cada requisição recebida e responde
+ * Servidor HTTPS local que simula o portal. O certificado do servidor é emitido pela CA de teste
+ * ({@code tls/server.p12}); {@link #httpClient()} devolve um cliente que confia nessa CA, como o
+ * cliente de produção faz com o ArmazemDeConfianca informado. Registra cada requisição recebida e responde
  * com o que o teste configurou.
  */
 public final class LocalPortal implements AutoCloseable {
 
-    public record Request(String method, String path, Map<String, String> headers) {
+    public record Request(String method, String path, Map<String, String> headers, String body) {
         public String header(String name) {
             return headers.get(name);
         }
     }
 
-    public record Reply(int status, String body, String setToken, String csrfToken) {
+    public record Reply(int status, String body, String setToken, String tokenCsrf) {
     }
 
     private final HttpServer server;
@@ -38,35 +44,31 @@ public final class LocalPortal implements AutoCloseable {
     private final Map<String, Deque<Reply>> routes = new ConcurrentHashMap<>();
     private volatile Reply reply = new Reply(200, "", "jwt-padrao", "csrf-padrao");
 
-    /** Servidor HTTP simples, sem TLS. */
+    /** Servidor HTTPS com o certificado de teste do servidor. */
     public LocalPortal() throws IOException {
-        this(null);
+        this(serverTls());
     }
 
-    /**
-     * Servidor HTTPS quando {@code tls} é informado; caso contrário, HTTP simples.
-     */
+    /** Servidor HTTPS com o {@code tls} informado. */
     public LocalPortal(SSLContext tls) throws IOException {
-        if (tls == null) {
-            server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
-            scheme = "http";
-        } else {
-            HttpsServer https = HttpsServer.create(new InetSocketAddress("localhost", 0), 0);
-            https.setHttpsConfigurator(new HttpsConfigurator(tls));
-            server = https;
-            scheme = "https";
-        }
+        java.util.Objects.requireNonNull(tls, "tls");
+        HttpsServer https = HttpsServer.create(new InetSocketAddress("localhost", 0), 0);
+        https.setHttpsConfigurator(new HttpsConfigurator(tls));
+        server = https;
+        scheme = "https";
         server.createContext("/", exchange -> {
             Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
             exchange.getRequestHeaders().forEach((name, values) -> headers.put(name, values.getFirst()));
-            requests.add(new Request(exchange.getRequestMethod(), exchange.getRequestURI().getPath(), headers));
+            String requestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            requests.add(new Request(exchange.getRequestMethod(), exchange.getRequestURI().getPath(), headers,
+                    requestBody));
 
             Reply r = nextReply(exchange.getRequestURI().getPath());
             if (r.setToken() != null) {
                 exchange.getResponseHeaders().add("Set-Token", r.setToken());
             }
-            if (r.csrfToken() != null) {
-                exchange.getResponseHeaders().add("X-CSRF-Token", r.csrfToken());
+            if (r.tokenCsrf() != null) {
+                exchange.getResponseHeaders().add("X-CSRF-Token", r.tokenCsrf());
             }
             exchange.getResponseHeaders().add("Content-Type", "application/json");
 
@@ -109,6 +111,40 @@ public final class LocalPortal implements AutoCloseable {
         }
         synchronized (queue) {
             return queue.size() > 1 ? queue.poll() : queue.peek();
+        }
+    }
+
+    /** Cliente HTTP que confia na CA de teste do servidor (e só nela). */
+    public HttpClient httpClient() {
+        return HttpClient.newBuilder().sslContext(clientTls()).build();
+    }
+
+    private static SSLContext serverTls() throws IOException {
+        try {
+            KeyStore keyStore = Fixtures.keyStore("tls/server.p12");
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            kmf.init(keyStore, Fixtures.password());
+            SSLContext context = SSLContext.getInstance("TLS");
+            context.init(kmf.getKeyManagers(), null, null);
+            return context;
+        } catch (Exception e) {
+            throw new IOException("Não foi possível carregar o certificado de teste do servidor", e);
+        }
+    }
+
+    private static SSLContext clientTls() {
+        try {
+            KeyStore trust = KeyStore.getInstance("PKCS12");
+            try (var in = java.nio.file.Files.newInputStream(Fixtures.pkcs12("tls/ca-truststore.p12"))) {
+                trust.load(in, Fixtures.trustStorePassword());
+            }
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            tmf.init(trust);
+            SSLContext context = SSLContext.getInstance("TLS");
+            context.init(null, tmf.getTrustManagers(), null);
+            return context;
+        } catch (Exception e) {
+            throw new IllegalStateException("Não foi possível carregar a CA de teste", e);
         }
     }
 

@@ -21,7 +21,7 @@ public final class Fixtures {
         return PASSWORD.toCharArray();
     }
 
-    /** Senha dos arquivos de TrustStore de teste (o keytool exige ao menos 6 caracteres). */
+    /** Senha dos arquivos de ArmazemDeConfianca de teste (o keytool exige ao menos 6 caracteres). */
     public static char[] trustStorePassword() {
         return "confianca".toCharArray();
     }
